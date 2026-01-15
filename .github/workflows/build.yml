@@ -67,3 +67,10 @@ jobs:
           # Kiểm tra file đã được ghi đè chưa (tùy chọn để debug)
           cat vite.config.ts
           npm run build
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output  # Tên của file zip khi bạn tải về
+          path: external-project/dist/  # Đường dẫn đến thư mục cần lấy
+          retention-days: 5   # (Tùy chọn) Số ngày file sẽ được lưu trên GitHub
