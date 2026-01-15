@@ -1,0 +1,95 @@
+name: Build and Push External Product
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Quan trọng: Cho phép action có quyền push code vào repo
+
+    steps:
+      - name: Checkout Current Repo (This Repo)
+        uses: actions/checkout@v4
+        with:
+          path: 'current-repo' # Đặt vào folder riêng để tránh nhầm lẫn
+
+      - name: Checkout External Repo
+        uses: actions/checkout@v4
+        with:
+          repository: 'TranTam31/countdown-widget'
+          ref: 'main'
+          path: 'external-project'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Override Vite Config
+        run: |
+          cat <<'EOF' > external-project/vite.config.ts
+          import { defineConfig } from "vite";
+          import react from "@vitejs/plugin-react";
+          import { viteSingleFile } from "vite-plugin-singlefile";
+          import { viteStaticCopy } from "vite-plugin-static-copy";
+          import type { Plugin } from "vite";
+          function forbidImagesPlugin(): Plugin {
+            return {
+              name: "forbid-images",
+              enforce: "pre",
+              resolveId(source: string) {
+                if (/\.(png|jpe?g)$/i.test(source)) {
+                  throw new Error(`❌ Image files are not allowed: ${source}`);
+                }
+                return null;
+              },
+            };
+          }
+          export default defineConfig({
+            publicDir: false,
+            plugins: [
+              react(),
+              viteSingleFile(),
+              forbidImagesPlugin(),
+              viteStaticCopy({
+                targets: [
+                  {
+                    src: "src/config/widget-config.json",
+                    dest: ".",
+                  },
+                ],
+              }),
+            ],
+          });
+          EOF
+
+      - name: Install and Build
+        run: |
+          cd external-project
+          npm install
+          npm run build
+
+      - name: Deploy Build to Current Repo
+        run: |
+          # 1. Tạo thư mục đích trong repo hiện tại (ví dụ: folder 'dist-product')
+          mkdir -p current-repo/dist-product
+          
+          # 2. Copy sản phẩm đã build từ external-project sang current-repo
+          cp -r external-project/dist/* current-repo/dist-product/
+          
+          # 3. Tiến hành Commit và Push
+          cd current-repo
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add dist-product/
+          
+          # Kiểm tra xem có thay đổi gì không trước khi commit để tránh lỗi
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Automated build: Update product from countdown-widget"
+            git push origin main
+          fi
