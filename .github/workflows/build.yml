@@ -1,0 +1,31 @@
+name: Build External Repository
+
+on:
+  workflow_dispatch: # Cho phép bạn bấm nút chạy thủ công từ tab Actions
+
+jobs:
+  build-external:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Bước 1: Clone Repository khác
+      - name: Checkout External Repo
+        uses: actions/checkout@v4
+        with:
+          repository: 'TranTam31/countdown-widget' # Ví dụ: 'facebook/react'
+          ref: 'main'                          # Nhánh muốn clone
+          path: 'external-project'             # Thư mục sẽ chứa code clone về
+          # token: ${{ secrets.MY_PAT }}       # Mở comment này nếu repo kia là Private
+
+      # Bước 2: Thiết lập Node.js
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Bước 3: Di chuyển vào thư mục đã clone và build
+      - name: Install and Build
+        run: |
+          cd external-project
+          npm install
+          npm run build
