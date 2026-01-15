@@ -1,36 +1,32 @@
 name: Build External Repository
-
 on:
-  workflow_dispatch: # Cho phép bạn bấm nút chạy thủ công từ tab Actions
+  workflow_dispatch:
 
 jobs:
   build-external:
     runs-on: ubuntu-latest
-
     steps:
-      # Bước 1: Clone Repository khác
       - name: Checkout External Repo
         uses: actions/checkout@v4
         with:
-          repository: 'TranTam31/countdown-widget' # Ví dụ: 'facebook/react'
-          ref: 'main'                          # Nhánh muốn clone
-          path: 'external-project'             # Thư mục sẽ chứa code clone về
-          # token: ${{ secrets.MY_PAT }}       # Mở comment này nếu repo kia là Private
+          repository: 'TranTam31/countdown-widget'
+          ref: 'main'
+          path: 'external-project'
 
-      # Bước 2: Thiết lập Node.js
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
+      # Chú ý: Dùng 'EOF' để giữ nguyên icon ❌ và nội dung file
+      # Và ghi đè trực tiếp vào thư mục external-project
       - name: Override Vite Config
         run: |
-          cat <<EOF > vite.config.ts
+          cat <<'EOF' > external-project/vite.config.ts
           import { defineConfig } from "vite";
           import react from "@vitejs/plugin-react";
           import { viteSingleFile } from "vite-plugin-singlefile";
           import { viteStaticCopy } from "vite-plugin-static-copy";
-
           import type { Plugin } from "vite";
 
           function forbidImagesPlugin(): Plugin {
@@ -64,9 +60,10 @@ jobs:
           });
           EOF
 
-      # Bước 3: Di chuyển vào thư mục đã clone và build
       - name: Install and Build
         run: |
           cd external-project
           npm install
+          # Kiểm tra file đã được ghi đè chưa (tùy chọn để debug)
+          cat vite.config.ts
           npm run build
