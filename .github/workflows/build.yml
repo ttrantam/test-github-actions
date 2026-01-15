@@ -1,49 +1,100 @@
-name: Dynamic Build Tool
+name: Ultimate Vite Builder
 
 on:
   workflow_dispatch:
     inputs:
       repo_url:
-        description: 'Đường dẫn repo (dạng user/repo)'
+        description: 'Đường dẫn repo (ví dụ: TranTam31/countdown-widget)'
         required: true
         default: 'TranTam31/countdown-widget'
       branch:
         description: 'Nhánh muốn build'
         required: true
         default: 'main'
+      my_token:
+        description: 'Dán Personal Access Token (PAT) để build repo Private'
+        required: true
 
 jobs:
-  build-external:
+  build:
     runs-on: ubuntu-latest
+
     steps:
+      # Bước 1: Clone repo từ input
       - name: Checkout External Repo
         uses: actions/checkout@v4
         with:
-          # Sử dụng giá trị từ input người dùng nhập vào
           repository: ${{ github.event.inputs.repo_url }}
           ref: ${{ github.event.inputs.branch }}
           path: 'external-project'
+          token: ${{ github.event.inputs.my_token }}
 
+      # Bước 2: Setup Node.js
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'npm'
+          cache-dependency-path: 'external-project/package-lock.json'
 
+      # Bước 3: Ghi đè file vite.config.ts (Dùng 'EOF' để không lỗi emoji)
       - name: Override Vite Config
         run: |
           cat <<'EOF' > external-project/vite.config.ts
-          # ... (Giữ nguyên nội dung file config của bạn ở đây)
+          import { defineConfig } from "vite";
+          import react from "@vitejs/plugin-react";
+          import { viteSingleFile } from "vite-plugin-singlefile";
+          import { viteStaticCopy } from "vite-plugin-static-copy";
+          import type { Plugin } from "vite";
+
+          function forbidImagesPlugin(): Plugin {
+            return {
+              name: "forbid-images",
+              enforce: "pre",
+              resolveId(source: string) {
+                if (/\.(png|jpe?g)$/i.test(source)) {
+                  throw new Error(`❌ Image files are not allowed: ${source}`);
+                }
+                return null;
+              },
+            };
+          }
+
+          export default defineConfig({
+            publicDir: false,
+            plugins: [
+              react(),
+              viteSingleFile(),
+              forbidImagesPlugin(),
+              viteStaticCopy({
+                targets: [
+                  {
+                    src: "src/config/widget-config.json",
+                    dest: ".",
+                  },
+                ],
+              }),
+            ],
+          });
           EOF
 
-      - name: Install and Build
+      # Bước 4: Cài đặt thư viện và các Plugin cần thiết cho file config mới
+      - name: Install Dependencies
         run: |
           cd external-project
           npm install
+          # Cài thêm các plugin bạn đã thêm vào config để tránh lỗi "Module not found"
+          npm install vite-plugin-singlefile vite-plugin-static-copy --save-dev
+
+      # Bước 5: Build
+      - name: Build Project
+        run: |
+          cd external-project
           npm run build
 
+      # Bước 6: Tải thư mục dist lên để bạn download
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
-          # Đặt tên file zip theo tên repo cho dễ phân biệt
-          name: build-${{ github.run_id }}
+          name: build-result-${{ github.run_id }}
           path: external-project/dist/
