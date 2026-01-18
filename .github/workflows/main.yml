@@ -75,7 +75,7 @@ jobs:
         run: |
           # 1. Định nghĩa tên thư mục dựa trên Run ID và Job Name
           # Kết quả sẽ có dạng: 123456789-build-and-deploy
-          FOLDER_NAME="${{ github.run_id }}-${{ github.job }}"
+          FOLDER_NAME="${{ github.run_id }}"
           
           echo "Target folder: $FOLDER_NAME"
           
