@@ -73,23 +73,28 @@ jobs:
 
       - name: Deploy Build to Current Repo
         run: |
-          # 1. Tạo thư mục đích trong repo hiện tại (ví dụ: folder 'dist-product')
-          mkdir -p current-repo/dist-product
+          # 1. Định nghĩa tên thư mục dựa trên Run ID và Job Name
+          # Kết quả sẽ có dạng: 123456789-build-and-deploy
+          FOLDER_NAME="${{ github.run_id }}-${{ github.job }}"
           
-          # 2. Copy sản phẩm đã build từ external-project sang current-repo
-          cp -r external-project/dist/* current-repo/dist-product/
+          echo "Target folder: $FOLDER_NAME"
           
-          # 3. Tiến hành Commit và Push
+          # 2. Tạo thư mục đích trong repo hiện tại
+          mkdir -p "current-repo/$FOLDER_NAME"
+          
+          # 3. Copy sản phẩm đã build
+          cp -r external-project/dist/* "current-repo/$FOLDER_NAME/"
+          
+          # 4. Tiến hành Commit và Push
           cd current-repo
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          git add dist-product/
+          git add .
           
-          # Kiểm tra xem có thay đổi gì không trước khi commit để tránh lỗi
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "Automated build: Update product from countdown-widget"
+            git commit -m "Automated build: Update product (Run: ${{ github.run_id }})"
             git push origin main
           fi
