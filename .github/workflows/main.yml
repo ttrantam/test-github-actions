@@ -34,7 +34,10 @@ jobs:
           import react from "@vitejs/plugin-react";
           import { viteSingleFile } from "vite-plugin-singlefile";
           import { viteStaticCopy } from "vite-plugin-static-copy";
+          import tailwindcss from "@tailwindcss/vite";
+          
           import type { Plugin } from "vite";
+          
           function forbidImagesPlugin(): Plugin {
             return {
               name: "forbid-images",
@@ -47,10 +50,12 @@ jobs:
               },
             };
           }
+          
           export default defineConfig({
             publicDir: false,
             plugins: [
               react(),
+              tailwindcss(),
               viteSingleFile(),
               forbidImagesPlugin(),
               viteStaticCopy({
